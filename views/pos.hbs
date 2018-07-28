@@ -1,0 +1,223 @@
+<h1>Kassa</h1>
+
+<script src="/js/beep.js"></script>
+<script src="/js/qr.js"></script>
+<div id="loadingMessage">🎥 Unable to access video stream (please make sure you have a webcam enabled)</div>
+
+
+<div style="display: flex; justify-content: space-between;">
+
+    <div>
+        <table class="pos">
+            <thead>
+                <tr>
+                    <th class="row-name">
+                        Nimetus
+                    </th>
+                    <th class="row-amount">
+                        Hind
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="pos-rows"></tbody>
+            <tfoot>
+                <tr>
+                    <th class="row-name">
+                        &nbsp;
+                    </th>
+                    <th class="row-amount" id="total-amount">0,00 €</th>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div class="mt-3" id="payment"></div>
+    </div>
+
+    <div style="margin: 0 20px 0 0;">
+        <canvas id="canvas" style="width: 240px;" hidden></canvas>
+    </div>
+
+</div>
+
+<script>
+    var video = document.createElement("video");
+    var canvasElement = document.getElementById("canvas");
+    var canvas = canvasElement.getContext("2d");
+    var loadingMessage = document.getElementById("loadingMessage");
+
+    function drawLine(begin, end, color) {
+        canvas.beginPath();
+        canvas.moveTo(begin.x, begin.y);
+        canvas.lineTo(end.x, end.y);
+        canvas.lineWidth = 4;
+        canvas.strokeStyle = color;
+        canvas.stroke();
+    }
+
+    // Use facingMode: environment to attemt to get the front camera on phones
+    navigator.mediaDevices.getUserMedia({
+        video: {
+            facingMode: "environment"
+        }
+    }).then(function(stream) {
+        video.srcObject = stream;
+        video.setAttribute("playsinline", true); // required to tell iOS safari we don't want fullscreen
+        video.play();
+        requestAnimationFrame(tick);
+    });
+
+    var noCol = '#FF3B58';
+    var okCol = '#77DD77'
+
+    function tick() {
+        loadingMessage.innerText = "⌛ Loading video..."
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            loadingMessage.hidden = true;
+            canvasElement.hidden = false;
+
+            canvasElement.height = video.videoHeight;
+            canvasElement.width = video.videoWidth;
+            canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+            var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+            var code = jsQR(imageData.data, imageData.width, imageData.height);
+            if (code) {
+
+                var ok = /^[a-z]:[a-f0-9]{24}$/i.test(code.data);
+                var col = ok ? okCol : noCol;
+
+                drawLine(code.location.topLeftCorner, code.location.topRightCorner, col);
+                drawLine(code.location.topRightCorner, code.location.bottomRightCorner, col);
+                drawLine(code.location.bottomRightCorner, code.location.bottomLeftCorner, col);
+                drawLine(code.location.bottomLeftCorner, code.location.topLeftCorner, col);
+
+                if (ok) {
+                    new Beep(22050).play(1000, 0.1, [Beep.utils.amplify(8000)]);
+                    return processCode(code.data, () => requestAnimationFrame(tick));
+                }
+            }
+        }
+        requestAnimationFrame(tick);
+    }
+
+    function processCode(code, callback) {
+
+        var action = code.charAt(0).toUpperCase();
+        var id = code.substr(2);
+
+        switch (action) {
+
+            case 'M':
+                return processItem(id, callback);
+
+            case 'C':
+                return processCustomer(id, callback);
+
+            default:
+                return setTimeout(callback, 1000);
+        }
+
+    }
+
+    var total = 0;
+    var shouldClear = false;
+
+    function processItem(id, callback) {
+        if(shouldClear){
+            shouldClear = false;
+            document.querySelector('.pos-rows').innerHTML = '';
+            document.querySelector('#total-amount').textContent = '0,00 €';
+            document.querySelector('#payment').innerHTML = '';
+            total = 0;
+        }
+
+        fetch('/api/item/' + id).then(result => result.json()).then(item => {
+
+            if (!item || item.error) {
+                console.error(item && item.error || 'Item failed');
+                return setTimeout(callback, 1000);
+            }
+
+            var row = document.createElement('tr')
+            var name = document.createElement('th')
+            name.classList.add('row-name');
+            var amount = document.createElement('td')
+            amount.classList.add('row-amount');
+            name.textContent = item.name;
+            amount.textContent = item.amountStr + ' €';
+
+            row.appendChild(name);
+            row.appendChild(amount);
+
+            total += Number(item.amount);
+
+            document.querySelector('.pos-rows').appendChild(row);
+            document.querySelector('#total-amount').textContent = formatNr(total) + ' €';
+
+            return setTimeout(callback, 1000);
+        }).catch(err => {
+            console.error(err);
+            return setTimeout(callback, 1000);
+        })
+    }
+
+    function formatNr(nr) {
+        nr = Math.round(Number(nr) * 100).toString();
+        if (nr.length < 3) {
+            nr = '0'.repeat(3 - nr.length) + nr;
+        }
+
+        var cents = nr.substr(-2);
+        nr = nr.substr(0, nr.length - 2);
+
+        return nr.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ',' + cents;
+    }
+
+    function he(str){
+        return str.replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    }
+
+    function processCustomer(id, callback) {
+        if(!total){
+            return setTimeout(callback, 1000);
+        }
+
+        var form = {
+            account: id,
+            amount: total
+        };
+
+        fetch('/api/payment', {
+            method: 'post',
+            headers: {
+                Accept: 'application/json, text/plain, */*',
+                'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(form)
+        }).then(result => result.json()).then(payment => {
+
+            if (!payment || payment.error) {
+                console.error(payment && payment.error || 'Payment failed');
+                document.querySelector('#payment').innerHTML = '<h4 style="color:red">VIGA</h4><p>'+he(payment && payment.error || 'Payment failed')+'</p>'
+                return setTimeout(callback, 1000);
+            }
+
+            if(payment.paid){
+                total = 0;
+                shouldClear = true;
+
+                document.querySelector('#payment').innerHTML = '<h4 style="color:green">MAKSTUD</h4><p>Konto jääk: '+payment.accountAmountStr+' €</p>'
+
+                return setTimeout(callback, 1000);
+            } else {
+                document.querySelector('#payment').innerHTML = '<h4 style="color:red">EBAÕNNESTUS</h4><p>Konto jääk: '+payment.accountAmountStr+' €</p>'
+
+                return setTimeout(callback, 1000);
+            }
+
+        }).catch(err => {
+            console.error(err);
+            return setTimeout(callback, 1000);
+        })
+    }
+</script>

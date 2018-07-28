@@ -1,0 +1,18 @@
+body {
+    padding-top: 5rem;
+}
+
+table.pos td,
+table.pos th {
+    font-size: 22px;
+    border-bottom: 1px solid black;
+}
+
+.row-name {
+    width: 150px;
+}
+
+.row-amount {
+    text-align: right;
+    width: 100px;
+}

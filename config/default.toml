@@ -1,0 +1,16 @@
+
+
+[www]
+log=':remote-addr [:date[iso]] ":method :url HTTP/:http-version" :status :res[content-length]'
+secret="a cat"
+postsize="5MB"
+port=3009
+
+
+[dbs]
+# redis connection string for Express sessions
+redis="redis://127.0.0.1:6379/8"
+
+# main database
+mongo="mongodb://127.0.0.1:27017"
+database="pankur"

@@ -1,0 +1,31 @@
+<h1>Kauba andmed</h1>
+
+<div class="row">
+    <div class="col-4">
+        <table class="table table-bordered">
+            <tr>
+                <th>
+                    Nimi
+                </th>
+                <td style="text-align: right">
+                    {{itemData.name}}
+                </td>
+            </tr>
+            <tr>
+                <th>
+                    Hind
+                </th>
+                <td style="text-align: right">
+                    {{itemData.amountStr}} €
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+
+<div class="mt-3"></div>
+
+<p>
+    <a class="btn btn-primary" href="/item/{{itemData._id}}/print" target="_blank">Prindi</a> või <a class="btn btn-primary" href="/items/print" target="_blank">Prindi kõik</a>
+</p>

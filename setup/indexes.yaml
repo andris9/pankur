@@ -1,0 +1,14 @@
+---
+indexes:
+
+- collection: accounts
+  index:
+    name: by_name
+    key:
+      name: 1
+
+- collection: items
+  index:
+    name: by_name
+    key:
+      name: 1

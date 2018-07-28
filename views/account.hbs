@@ -1,0 +1,31 @@
+<h1>Konto andmed</h1>
+
+<div class="row">
+    <div class="col-4">
+        <table class="table table-bordered">
+            <tr>
+                <th>
+                    Nimi
+                </th>
+                <td style="text-align: right">
+                    {{accountData.name}}
+                </td>
+            </tr>
+            <tr>
+                <th>
+                    Summa kontol
+                </th>
+                <td style="text-align: right">
+                    {{accountData.amountStr}} €
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+
+<div class="mt-3"></div>
+
+<p>
+    <a class="btn btn-primary" href="/account/{{accountData._id}}/print" target="_blank">Prindi</a>
+</p>
