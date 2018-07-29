@@ -28,7 +28,7 @@
             </tfoot>
         </table>
 
-        <div class="mt-3" id="payment"></div>
+        <div class="mt-3" id="payment" style="text-align: center;"></div>
     </div>
 
     <div style="margin: 0 20px 0 0; width: 240px;">
@@ -37,6 +37,10 @@
     </div>
 
 </div>
+
+<p>
+    <button class="btn btn-warning" onclick="clearPos()">Tühista</button>
+</p>
 
 <script>
     var video = document.createElement("video");
@@ -197,7 +201,7 @@
 
             if (!payment || payment.error) {
                 console.error(payment && payment.error || 'Payment failed');
-                document.querySelector('#payment').innerHTML = '<h4 style="color:red">VIGA</h4><p>'+he(payment && payment.error || 'Payment failed')+'</p>'
+                document.querySelector('#payment').innerHTML = '<h3 style="color:red">VIGA</h3><p>'+he(payment && payment.error || 'Payment failed')+'</p>'
                 return setTimeout(callback, 1000);
             }
 
@@ -205,11 +209,11 @@
                 total = 0;
                 shouldClear = true;
 
-                document.querySelector('#payment').innerHTML = '<h4 style="color:green">MAKSTUD</h4><p>Konto jääk: '+payment.accountAmountStr+' €</p>'
+                document.querySelector('#payment').innerHTML = '<h3 style="color:green">MAKSTUD</h3><p>Konto jääk: '+payment.accountAmountStr+' €</p>'
 
                 return setTimeout(callback, 1000);
             } else {
-                document.querySelector('#payment').innerHTML = '<h4 style="color:red">EBAÕNNESTUS</h4><p>Konto jääk: '+payment.accountAmountStr+' €</p>'
+                document.querySelector('#payment').innerHTML = '<h3 style="color:red">EBAÕNNESTUS</h3><p>Konto jääk: '+payment.accountAmountStr+' €</p>'
 
                 return setTimeout(callback, 1000);
             }
@@ -218,5 +222,13 @@
             console.error(err);
             return setTimeout(callback, 1000);
         })
+    }
+
+    function clearPos(){
+        shouldClear = false;
+        document.querySelector('.pos-rows').innerHTML = '';
+        document.querySelector('#total-amount').textContent = '0,00 €';
+        document.querySelector('#payment').innerHTML = '';
+        total = 0;
     }
 </script>
