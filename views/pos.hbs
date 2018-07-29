@@ -32,21 +32,24 @@
     </div>
 
     <div style="margin: 0 20px 0 0; width: 240px;">
-        <div id="loadingMessage">🎥 Unable to access video stream (please make sure you have a webcam enabled)</div>
+        <button id="startBtn" class="btn btn-success" onclick="startPos()">Käivita kassa</button>
+        <div id="loadingMessage" style="display: none">🎥 Unable to access video stream (please make sure you have a webcam enabled)</div>
         <canvas id="canvas" style="width: 240px;" hidden></canvas>
     </div>
 
 </div>
 
-<p>
-    <button class="btn btn-warning" onclick="clearPos()">Tühista</button>
+<p id="clearBtn" style="display: none;">
+    <button class="btn btn-warning" onclick="clearPos()">Tühjenda</button>
 </p>
 
 <script>
+
     var video = document.createElement("video");
     var canvasElement = document.getElementById("canvas");
     var canvas = canvasElement.getContext("2d");
     var loadingMessage = document.getElementById("loadingMessage");
+    var startBtn = document.getElementById("startBtn");
 
     function drawLine(begin, end, color) {
         canvas.beginPath();
@@ -57,17 +60,23 @@
         canvas.stroke();
     }
 
-    // Use facingMode: environment to attemt to get the front camera on phones
-    navigator.mediaDevices.getUserMedia({
-        video: {
-            facingMode: "user"// "environment"
-        }
-    }).then(function(stream) {
-        video.srcObject = stream;
-        video.setAttribute("playsinline", true); // required to tell iOS safari we don't want fullscreen
-        video.play();
-        requestAnimationFrame(tick);
-    });
+    function startPos(){
+
+        startBtn.style.display = 'none';
+        loadingMessage.style.display = 'block';
+
+        // Use facingMode: environment to attemt to get the front camera on phones
+        navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: "user"// "environment"
+            }
+        }).then(function(stream) {
+            video.srcObject = stream;
+            video.setAttribute("playsinline", true); // required to tell iOS safari we don't want fullscreen
+            video.play();
+            requestAnimationFrame(tick);
+        });
+    }
 
     var noCol = '#FF3B58';
     var okCol = '#77DD77'
@@ -131,6 +140,7 @@
             document.querySelector('#total-amount').textContent = '0,00 €';
             document.querySelector('#payment').innerHTML = '';
             total = 0;
+            document.querySelector('#clearBtn').style.display = 'none';
         }
 
         fetch('/api/item/' + id).then(result => result.json()).then(item => {
@@ -155,6 +165,7 @@
 
             document.querySelector('.pos-rows').appendChild(row);
             document.querySelector('#total-amount').textContent = formatNr(total) + ' €';
+            document.querySelector('#clearBtn').style.display = 'block';
 
             return setTimeout(callback, 1000);
         }).catch(err => {
@@ -229,6 +240,7 @@
         document.querySelector('.pos-rows').innerHTML = '';
         document.querySelector('#total-amount').textContent = '0,00 €';
         document.querySelector('#payment').innerHTML = '';
+        document.querySelector('#clearBtn').style.display = 'none';
         total = 0;
     }
 </script>
