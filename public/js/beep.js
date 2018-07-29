@@ -1,168 +1,62 @@
-/**
- * Copyright 2010 Neuman Vong. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- *   1. Redistributions of source code must retain the above copyright notice,
- *   this list of conditions and the following disclaimer.
- *
- *   2. Redistributions in binary form must reproduce the above copyright
- *   notice, this list of conditions and the following disclaimer in the
- *   documentation and/or other materials provided with the distribution.
- */
-(function(ns) {
-    var utils = {
-        amplify(gain) {
-            return function(sample) {
-                return sample * gain;
-            };
-        },
-        ushort(sample) {
-            return String.fromCharCode(255 & sample, 255 & (sample >> 8));
-        },
-        ulong(sample) {
-            return String.fromCharCode(255 & sample, 255 & (sample >> 8), 255 & (sample >> 16), 255 & (sample >> 24));
-        },
-        gcd(a, b) {
-            while (b) {
-                let a_ = a;
-                (a = b), (b = a_ % b);
-            }
-            return a;
-        },
-        lcm(a, b) {
-            return Math.floor((a * b) / utils.gcd(a, b));
-        },
-        compose(fns) {
-            return function(a) {
-                for (let i = 0; i < fns.length; i++) {
-                    a = fns[i](a);
-                }
-                return a;
-            };
-        },
-        map(fn, items) {
-            let result = [];
-            for (let i = 0; i < items.length; i++) {
-                result.push(fn.call(this, items[i]));
-            }
-            return result;
-        },
-        getattr(attr) {
-            return function(items) {
-                return items[attr];
-            };
-        },
-        zip() {
-            if (arguments.length == 0) {
-                return [];
-            }
-            let lists = Array.prototype.slice.call(arguments);
-            let result = [];
-            let min = Math.min.apply(null, utils.map(utils.getattr('length'), lists));
-            for (let i = 0; i < min; i++) {
-                result.push(utils.map(utils.getattr(i), lists));
-            }
-            return result;
-        },
-        sum(numbers) {
-            return utils.foldl((a, b) => a + b, numbers);
-        },
-        bind(ctx, fn) {
-            return function() {
-                let args = Array.prototype.slice.call(arguments);
-                return fn.apply(ctx, args);
-            };
-        },
-        foldl(fn, items) {
-            if (items.length == 1) {
-                return items[0];
-            }
-            let result = fn(items[0], items[1]);
-            for (let i = 2; i < items.length; i++) {
-                result = fn(result, items[i]);
-            }
-            return result;
-        },
-        mulmod(a, b, c) {
-            return (a * b) % c;
-        },
-        range(len) {
-            let result = [];
-            for (let i = 0; i < len; i++) {
-                result.push(i);
-            }
-            return result;
-        }
-    };
-    function Beep(samplerate) {
-        if (!(this instanceof Beep)) {
-            return new Beep(samplerate);
-        }
-        if (typeof samplerate !== 'number' || samplerate < 1) {
-            return null;
-        }
-        this.channels = 1;
-        this.bitdepth = 16;
-        this.samplerate = samplerate;
-        this.sine = [];
-        let factor = (2 * Math.PI) / parseFloat(samplerate);
-        for (let n = 0; n < samplerate; n++) {
-            this.sine.push(Math.sin(n * factor));
-        }
+'use strict';
+function _classCallCheck(t, e) {
+    if (!(t instanceof e)) {
+        throw new TypeError('Cannot call a class as a function');
     }
-    Beep.prototype = {
-        generate(freqs) {
-            freqs = freqs instanceof Array ? freqs : [freqs];
-            let map = utils.bind(this, utils.map);
-            let periods = map(function(a) {
-                return utils.lcm(this.samplerate, a) / a;
-            }, freqs);
-            let lcm = utils.foldl(utils.lcm, periods);
-            let sample = function(time) {
-                return function(freq) {
-                    return this.sine[utils.mulmod(time, freq, this.samplerate)];
-                };
-            };
-            return map(t => utils.sum(map(sample(t), freqs)), utils.range(lcm));
-        },
-        encode(freqs, duration, filters) {
-            freqs = freqs instanceof Array ? freqs : [freqs];
-            let transforms = utils.compose((filters || []).concat([utils.ushort]));
-            let samples = utils.map(transforms, this.generate(freqs));
-            let reps = Math.ceil((duration * this.samplerate) / samples.length);
-            let fulldata = new Array(reps + 1).join(samples.join(''));
-            let data = fulldata.substr(0, this.samplerate * duration * 2);
-            let fmtChunk = [
-                ['f', 'm', 't', ' '].join(''),
-                utils.ulong(Beep.PCM_CHUNK_SIZE),
-                utils.ushort(Beep.LINEAR_QUANTIZATION),
-                utils.ushort(this.channels),
-                utils.ulong(this.samplerate),
-                utils.ulong((this.samplerate * this.channels * this.bitdepth) / 8),
-                utils.ushort(this.bitdepth / 8),
-                utils.ushort(this.bitdepth)
-            ].join('');
-            let dataChunk = [['d', 'a', 't', 'a'].join(''), utils.ulong((data.length * this.channels * this.bitdepth) / 8), data].join('');
-            let header = [['R', 'I', 'F', 'F'].join(''), utils.ulong(4 + (8 + fmtChunk.length) + (8 + dataChunk.length)), ['W', 'A', 'V', 'E'].join('')].join(
-                ''
+}
+
+let Beep = (function() {
+    function t() {
+        let e = arguments.length <= 0 || void 0 === arguments[0] ? 1 : arguments[0],
+            o = arguments.length <= 1 || void 0 === arguments[1] ? 'square' : arguments[1];
+        _classCallCheck(this, t), (this._volume = e), (this._waveType = o);
+    }
+    return (
+        (t.prototype.init = function() {
+            return void 0 === this._audioContext ? ((this._audioContext = this._getAudioContext()), Promise.resolve()) : Promise.resolve();
+        }),
+        (t.prototype.beep = function(t) {
+            let e = this;
+            return this.init().then(
+                () =>
+                    new Promise(o => {
+                        let n = e._createGainNode(e._volume),
+                            r = e._createOscillatorNode(e._waveType);
+                        r.onended = function() {
+                            return o();
+                        };
+                        let i = e._audioContext.currentTime,
+                            a = t.shift(),
+                            s = a[0],
+                            u = a[1],
+                            c = i + e._msToS(u);
+                        (r.frequency.value = s),
+                            t.forEach(t => {
+                                let o = t[0],
+                                    n = t[1];
+                                r.frequency.setValueAtTime(o, c), (c += e._msToS(n));
+                            }),
+                            r.connect(n),
+                            n.connect(e._audioContext.destination),
+                            r.start(i),
+                            r.stop(c);
+                    })
             );
-            return [header, fmtChunk, dataChunk].join('');
-        },
-        play(freq, duration, filters, callback) {
-            filters = filters || [];
-            let data = btoa(this.encode(freq, duration, filters));
-            let audio = document.createElement('audio');
-            audio.src = 'data:audio/x-wav;base64,' + data;
-            audio.play();
-            if (typeof callback !== 'undefined') {
-                audio.onended = callback;
-            }
-        }
-    };
-    Beep.LINEAR_QUANTIZATION = 1;
-    Beep.PCM_CHUNK_SIZE = 16;
-    Beep.utils = utils;
-    ns.Beep = Beep;
-})(window[window.NS_BEEP] || window);
+        }),
+        (t.prototype._createOscillatorNode = function(t) {
+            let e = this._audioContext.createOscillator();
+            return (e.start = e.noteOn || e.start), (e.stop = e.noteOff || e.stop), (e.type = t), e;
+        }),
+        (t.prototype._createGainNode = function(t) {
+            let e = this._audioContext.createGain();
+            return (e.start = e.noteOn || e.start), (e.stop = e.noteOff || e.stop), (e.gain.value = t), e;
+        }),
+        (t.prototype._getAudioContext = function() {
+            return new (window.AudioContext || window.webkitAudioContext)();
+        }),
+        (t.prototype._msToS = function(t) {
+            return t / 1e3;
+        }),
+        t
+    );
+})();
