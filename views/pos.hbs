@@ -2,8 +2,6 @@
 
 <script src="/js/beep.js"></script>
 <script src="/js/qr.js"></script>
-<div id="loadingMessage">🎥 Unable to access video stream (please make sure you have a webcam enabled)</div>
-
 
 <div style="display: flex; justify-content: space-between;">
 
@@ -33,7 +31,8 @@
         <div class="mt-3" id="payment"></div>
     </div>
 
-    <div style="margin: 0 20px 0 0;">
+    <div style="margin: 0 20px 0 0; width: 240px;">
+        <div id="loadingMessage">🎥 Unable to access video stream (please make sure you have a webcam enabled)</div>
         <canvas id="canvas" style="width: 240px;" hidden></canvas>
     </div>
 
