@@ -1,3 +1,12 @@
+<ul class="nav nav-tabs">
+    <li class="nav-item">
+        <a class="nav-link active" href="/accounts">Loo uus</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/accounts/update">Kanna raha</a>
+    </li>
+</ul>
+
 <h1>Loo uus pangakonto</h1>
 
 <form method="post" action="/accounts">
@@ -5,13 +14,17 @@
     <div class="form-group">
         <label for="accountName">Konto omaniku nimi</label>
         <input type="text" class="form-control {{#if errors.name}} is-invalid{{/if}}" name="name" id="accountName" placeholder="Sisesta konto omaniku nimi" value="{{values.name}}">
-        {{#if errors.name}}<div class="invalid-feedback">{{errors.name}}</div>{{/if}}
+        {{#if errors.name}}
+            <div class="invalid-feedback">{{errors.name}}</div>
+        {{/if}}
     </div>
 
     <div class="form-group">
         <label for="accountAmount">Summa kaardil</label>
         <input type="number" class="form-control {{#if errors.amount}} is-invalid{{/if}}" name="amount" id="accountAmount" placeholder="Sisesta kaardile laetav summa" value="{{values.amount}}">
-        {{#if errors.amount}}<div class="invalid-feedback">{{errors.amount}}</div>{{/if}}
+        {{#if errors.amount}}
+            <div class="invalid-feedback">{{errors.amount}}</div>
+        {{/if}}
     </div>
 
     <button type="submit" class="btn btn-primary">Loo kaart</button>

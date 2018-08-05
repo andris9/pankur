@@ -1,0 +1,131 @@
+<script src="/js/qr.js"></script>
+
+<ul class="nav nav-tabs">
+    <li class="nav-item">
+        <a class="nav-link" href="/accounts">Loo uus</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link active" href="/accounts/update">Kanna raha</a>
+    </li>
+</ul>
+
+<h1>Kanna kaardile raha</h1>
+
+<form method="post" action="/accounts/update">
+    <div style="display: flex; flex-direction: row;  align-items: stretch; justify-content: space-between;">
+
+        <div style="flex: 1">
+
+            <div class="form-group">
+                <label for="account">Kaardi number</label>
+                <input type="text" class="form-control {{#if errors.account}} is-invalid{{/if}}" name="account" id="account" placeholder="Sisesta kaardi number või skänni kaart" value="{{values.account}}" required>
+                {{#if errors.account}}
+                    <div class="invalid-feedback">{{errors.account}}</div>
+                {{/if}}
+            </div>
+
+            <div class="form-group">
+                <label for="accountAmount">Lisatav summa</label>
+                <input type="number" class="form-control {{#if errors.amount}} is-invalid{{/if}}" name="amount" id="accountAmount" placeholder="Sisesta kaardile laetav summa" value="{{values.amount}}" required>
+                {{#if errors.amount}}
+                    <div class="invalid-feedback">{{errors.amount}}</div>
+                {{/if}}
+            </div>
+
+            <button type="submit" class="btn btn-primary">Lisa summa kaardile</button>
+
+        </div>
+
+        <div style="margin: 0 20px 0 20px; width: 240px;">
+            <div id="loadingMessage">🎥 Unable to access video stream (please make sure you have a webcam enabled)</div>
+            <canvas id="canvas" style="width: 240px;" hidden></canvas>
+        </div>
+
+    </div>
+</form>
+
+<script>
+    var video = document.createElement("video");
+    var canvasElement = document.getElementById("canvas");
+    var canvas = canvasElement.getContext("2d");
+    var loadingMessage = document.getElementById("loadingMessage");
+
+    function drawLine(begin, end, color) {
+        canvas.beginPath();
+        canvas.moveTo(begin.x, begin.y);
+        canvas.lineTo(end.x, end.y);
+        canvas.lineWidth = 4;
+        canvas.strokeStyle = color;
+        canvas.stroke();
+    }
+
+    function startPos() {
+        // Use facingMode: environment to attemt to get the front camera on phones
+        navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: "user" // "environment"
+            }
+        }).then(function(stream) {
+            video.srcObject = stream;
+            video.setAttribute("playsinline", true); // required to tell iOS safari we don't want fullscreen
+            video.play();
+            requestAnimationFrame(tick);
+        });
+    }
+
+    var noCol = '#FF3B58';
+    var okCol = '#77DD77'
+
+    var ticksPassed = 0;
+
+    function tick() {
+        loadingMessage.innerText = "⌛ Loading video..."
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            loadingMessage.hidden = true;
+            canvasElement.hidden = false;
+
+            canvasElement.height = video.videoHeight;
+            canvasElement.width = video.videoWidth;
+            canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+            if (ticksPassed++ > 10) { // do not check the image too often to save CPU
+                ticksPassed = 0;
+                var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+                var code = jsQR(imageData.data, imageData.width, imageData.height);
+                if (code) {
+
+                    var ok = /^[a-z]:[a-f0-9]{24}$/i.test(code.data);
+                    var col = ok ? okCol : noCol;
+
+                    drawLine(code.location.topLeftCorner, code.location.topRightCorner, col);
+                    drawLine(code.location.topRightCorner, code.location.bottomRightCorner, col);
+                    drawLine(code.location.bottomRightCorner, code.location.bottomLeftCorner, col);
+                    drawLine(code.location.bottomLeftCorner, code.location.topLeftCorner, col);
+
+                    if (ok) {
+                        return processCode(code.data, () => requestAnimationFrame(tick));
+                    }
+                }
+            }
+        }
+        requestAnimationFrame(tick);
+    }
+
+
+    function processCode(code, callback) {
+
+        var action = code.charAt(0).toUpperCase();
+        var id = code.substr(2);
+
+        switch (action) {
+
+            case 'C':
+                return document.querySelector('#account').value = id;
+
+            default:
+                return setTimeout(callback, 1000);
+        }
+
+    }
+
+    startPos()
+</script>

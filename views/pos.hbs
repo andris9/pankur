@@ -3,10 +3,11 @@
 <script src="/js/beep.js"></script>
 <script src="/js/qr.js"></script>
 
-<div style="display: flex; justify-content: space-between;">
+<div style="display: flex; flex-direction: row;  align-items: stretch; justify-content: space-between;">
 
-    <div>
-        <table class="pos">
+    <div style="flex: 1">
+
+        <table class="table table-striped pos">
             <thead>
                 <tr>
                     <th class="row-name">
@@ -31,7 +32,7 @@
         <div class="mt-3" id="payment" style="text-align: center;"></div>
     </div>
 
-    <div style="margin: 0 20px 0 0; width: 240px;">
+    <div style="margin: 0 20px 0 20px; width: 240px;">
         <button id="startBtn" class="btn btn-success" onclick="startPos()">Käivita kassa</button>
         <div id="loadingMessage" style="display: none">🎥 Unable to access video stream (please make sure you have a webcam enabled)</div>
         <canvas id="canvas" style="width: 240px;" hidden></canvas>
@@ -86,6 +87,8 @@
     var noCol = '#FF3B58';
     var okCol = '#77DD77'
 
+    var ticksPassed = 0;
+
     function tick() {
         loadingMessage.innerText = "⌛ Loading video..."
         if (video.readyState === video.HAVE_ENOUGH_DATA) {
@@ -95,22 +98,27 @@
             canvasElement.height = video.videoHeight;
             canvasElement.width = video.videoWidth;
             canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
-            var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-            var code = jsQR(imageData.data, imageData.width, imageData.height);
-            if (code) {
+            if (ticksPassed++ > 10) { // do not check the image too often to save CPU
+                ticksPassed = 0;
+                var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+                var code = jsQR(imageData.data, imageData.width, imageData.height);
+                if (code) {
 
-                var ok = /^[a-z]:[a-f0-9]{24}$/i.test(code.data);
-                var col = ok ? okCol : noCol;
+                    var ok = /^[a-z]:[a-f0-9]{24}$/i.test(code.data);
+                    var col = ok ? okCol : noCol;
 
-                drawLine(code.location.topLeftCorner, code.location.topRightCorner, col);
-                drawLine(code.location.topRightCorner, code.location.bottomRightCorner, col);
-                drawLine(code.location.bottomRightCorner, code.location.bottomLeftCorner, col);
-                drawLine(code.location.bottomLeftCorner, code.location.topLeftCorner, col);
+                    drawLine(code.location.topLeftCorner, code.location.topRightCorner, col);
+                    drawLine(code.location.topRightCorner, code.location.bottomRightCorner, col);
+                    drawLine(code.location.bottomRightCorner, code.location.bottomLeftCorner, col);
+                    drawLine(code.location.bottomLeftCorner, code.location.topLeftCorner, col);
 
-                if (ok) {
-                    //new Beep(22050).play(1000, 0.1, [Beep.utils.amplify(8000)]);
-                    beep.beep([[1000, 100]])
-                    return processCode(code.data, () => requestAnimationFrame(tick));
+                    if (ok) {
+                        //new Beep(22050).play(1000, 0.1, [Beep.utils.amplify(8000)]);
+                        beep.beep([
+                            [1000, 100]
+                        ])
+                        return processCode(code.data, () => requestAnimationFrame(tick));
+                    }
                 }
             }
         }

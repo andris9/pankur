@@ -183,6 +183,80 @@ router.get('/account/:nr/print', (req, res, next) => {
     );
 });
 
+router.get('/accounts/update', (req, res) => {
+    res.render('account-update', {
+        pageAccounts: true
+    });
+});
+
+router.post('/accounts/update', (req, res) => {
+    const schema = Joi.object().keys({
+        account: Joi.string()
+            .trim()
+            .empty('')
+            .hex()
+            .length(24)
+            .required(),
+        amount: Joi.number()
+            .empty('')
+            .min(1)
+            .max(1000000)
+            .required()
+    });
+
+    const result = Joi.validate(req.body, schema, {
+        abortEarly: false,
+        convert: true,
+        stripUnknown: true
+    });
+
+    let showErrors = err => {
+        let errors = {};
+        if (err && err.details) {
+            err.details.forEach(detail => {
+                if (!errors[detail.path]) {
+                    errors[detail.path] = detail.message;
+                }
+            });
+            req.flash('danger', 'Andmete kontroll ebaõnnestus');
+        } else {
+            req.flash('danger', err.message);
+        }
+        return res.render('account-update', {
+            pageAccounts: true,
+            values: result.value,
+            errors
+        });
+    };
+
+    if (result.error) {
+        return showErrors(result.error);
+    }
+
+    db.client.collection('accounts').findOneAndUpdate(
+        {
+            _id: new ObjectID(result.value.account)
+        },
+        {
+            $inc: {
+                amount: result.value.amount
+            }
+        },
+        (err, r) => {
+            if (err) {
+                return showErrors(err);
+            }
+
+            if (!r || !r.value) {
+                return showErrors(new Error('Andmete salvestamine ebaõnnestus'));
+            }
+
+            req.flash('success', 'Konto on edukalt uuendatud');
+            res.redirect('/account/' + r.value._id);
+        }
+    );
+});
+
 router.get('/items', (req, res) => {
     res.render('items', {
         pageItems: true
